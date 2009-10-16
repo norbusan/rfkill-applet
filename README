@@ -1,0 +1,29 @@
+
+rfkill applet
+version 0.1
+
+Access to the rfkill switches on the system
+
+Warning: I never programmed python, nor pygtk, never any applet, never
+dbus/hal, so please do expect this applet to make your computer disappear
+in flames.
+
+Code sources:
+- gfreqlet.sf.net for pygtk applets
+- dbus/hal interface by trial and error with loads of help from the
+  plasmoid-applet-killswitch of Eva Brucherseifer
+  (see http://www.basyskom.org/~eva/log_installation_vaio_z21vnx.html)
+
+
+Installation:
+- put rfkill-applet.py into /usr/bin/rfkill-applet  (no .py extension!)
+- put rfkill-applet.server into /usr/lib/bonobo/server/
+- put rfkill-applet.png into /usr/share/pixmaps
+- restart gnome session
+- add the applet
+
+Bugs: many, help needed, suggestions welcome!
+
+Copyright (C) 2009 Norbert Preining <preining@logic.at>
+Licensed under GPLv3
+
