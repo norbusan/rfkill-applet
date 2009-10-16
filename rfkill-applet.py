@@ -15,7 +15,7 @@ import gobject
 import struct
 import dbus
 
-version = '0.6'
+version = '0.6dev'
 
 
 event_format = "IBBBB"
