@@ -1,4 +1,16 @@
 
+2009-06-23
+
+  * release 0.4
+
+2009-06-20
+
+  * change hardware switch detection logic: now there is no special hardware
+    switch property, but if *one* value has the hardoff value it is assumed
+    that the hardware switch is turned on, otherwise turned off.
+    Adjust the config file removing the hardswitch directive, and ignore
+    the 5100AGN switch
+    WARNING: You have to upate your config files!
 
 2009-06-20
 

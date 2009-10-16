@@ -19,7 +19,7 @@ import gobject
 # from dbus.mainloop.glib import DBusGMainLoop
 # DBusGMainLoop(set_as_default=True)
 
-version = '0.3'
+version = '0.4'
 
 bus = dbus.SystemBus()
 hal_obj = bus.get_object("org.freedesktop.Hal", "/org/freedesktop/Hal/Manager")
@@ -45,10 +45,11 @@ class Rfkill:
     self.rfkill_ignore = {}
     self.onvalue = {}
     self.offvalue = {}
-    self.hardswitch = ''
+    self.hardoffvalue = {}
     self.default_onvalue = -1
     self.default_offvalue = -1
     self.default_hardoffvalue = -1
+    self.hardswitchedoff = False
 
     # that are milliseconds!
     self.timeout_interval = 3000
@@ -147,9 +148,6 @@ class Rfkill:
       elif key == 'default_hardoffvalue':
         if val != '':
           self.default_hardoffvalue = int(val);
-      elif key == 'hardswitch':
-        if val != '':
-          self.hardswitch = val
       # now the specifications rfkill.property=val
       else:
         if val != '':
@@ -186,14 +184,13 @@ class Rfkill:
           showname = self.rfkill_usernames[name]
         else:
           showname = name
-        if (self.hardswitch != name):
-          menu_item = gtk.CheckMenuItem(label=showname)
-          if (self.hardswitchedoff):
-            self.tooltips.set_tip(menu_item, "The hardware switch is activated, you cannot use software to turn this device on.")
-          menu_item.set_active(self.rfkill_states[uri])
-          menu_item.show()
-          menu_item.connect("toggled", self.toggle_rfkill, uri)
-          popmenu.append(menu_item)
+        menu_item = gtk.CheckMenuItem(label=showname)
+        if (self.hardswitchedoff):
+          self.tooltips.set_tip(menu_item, "The hardware switch is activated, you cannot use software to turn this device on.")
+        menu_item.set_active(self.rfkill_states[uri])
+        menu_item.show()
+        menu_item.connect("toggled", self.toggle_rfkill, uri)
+        popmenu.append(menu_item)
       popmenu.show()
       popmenu.popup(None, None, None, event.button, event.time)
 
@@ -220,17 +217,10 @@ class Rfkill:
           self.rfkill_names[udi] = name
 
   def get_rfstates(self):
-    # first we check if there is an hardware switch defined
-    hardoffval = self.default_hardoffvalue
-    if (self.hardswitch != ''):
-      for udi in self.rfkill_devs.keys():
-        name = self.rfkill_names[udi]
-        if (self.hardswitch == name):
-          if (name in self.offvalue):
-            hardoffval = self.offvalue[name]
-
     for udi in self.rfkill_devs.keys():
       name = self.rfkill_names[udi]
+      if (name in self.rfkill_ignore):
+        continue
       val = int(self.rfkill_devs[udi].GetProperty('killswitch.state'))
 
       offval = self.default_offvalue
@@ -241,17 +231,21 @@ class Rfkill:
       if (name in self.offvalue):
         onval = self.onvalue[name]
 
+      hardoffval = self.default_hardoffvalue
+      if (name in self.hardoffvalue):
+        hardoffval = self.hardoffvalue[name]
+
       if (val == onval):
         self.rfkill_states[udi] = True
+        self.hardswitchedoff = False
       elif (val == offval):
         self.rfkill_states[udi] = False
+        self.hardswitchedoff = False
       elif (val == hardoffval):
         self.rfkill_states[udi] = False
+        self.hardswitchedoff = True
       else:
         print "Unknown state: ", val
-
-      if (self.hardswitch == name):
-        self.hardswitchedoff = not(self.rfkill_states[udi])
 
 
   def cleanup(self, data):
