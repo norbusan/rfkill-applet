@@ -1,4 +1,12 @@
 
+2009-08-10
+
+  * release 0.6
+  * refactor dbus and /dev/rfkill access in separate objects
+  * get rid of threading, use gobject.io_add_watch on the fd
+    that means also that the rfkillclient.py is now outdated
+    and should be removed (thanks to Johannes Berg)
+
 2009-08-03
 
   * release 0.5
