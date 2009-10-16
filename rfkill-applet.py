@@ -14,7 +14,12 @@ pygtk.require('2.0')
 import gtk
 import gnomeapplet
 
-version = '0.2'
+import gobject
+
+# from dbus.mainloop.glib import DBusGMainLoop
+# DBusGMainLoop(set_as_default=True)
+
+version = '0.3'
 
 bus = dbus.SystemBus()
 hal_obj = bus.get_object("org.freedesktop.Hal", "/org/freedesktop/Hal/Manager")
@@ -34,6 +39,7 @@ class Rfkill:
 
     self.rfkill_devs = {}
     self.rfkill_devobjs = {}
+    self.rfkill_usernames = {}
     self.rfkill_names = {}
     self.rfkill_states = {}
     self.rfkill_ignore = {}
@@ -43,6 +49,9 @@ class Rfkill:
     self.default_onvalue = -1
     self.default_offvalue = -1
     self.default_hardoffvalue = -1
+
+    # that are milliseconds!
+    self.timeout_interval = 3000
 
     self.panel_size = 24
 
@@ -55,11 +64,10 @@ class Rfkill:
 
     self.ebmain = gtk.EventBox()
 
-    self.get_rfkills()
-    self.get_rfstates()
     self.icon = gtk.Image()
-    self.set_main_icon()
-    self.update_tooltip()
+
+    self.update_all()
+    gobject.timeout_add(self.timeout_interval, self.update_all)
 
     self.ebmain.add(self.icon)
     self.applet.add(self.ebmain)
@@ -81,6 +89,14 @@ class Rfkill:
     # self.load_prefs()
   
 
+  def update_all(self):
+    self.get_rfkills()
+    self.get_rfstates()
+    self.set_main_icon()
+    self.update_tooltip()
+    # return true, otherwise the gobject timer removes that callback
+    return True
+    
   def update_tooltip(self):
     if (self.hardswitchedoff):
       self.tooltips.set_tip(self.ebmain, "The devices are switched off by hardware. You have to switch the hardware switch first on!")
@@ -144,6 +160,8 @@ class Rfkill:
             self.offvalue[rf] = int(val)
           elif prop == 'ignore':
             self.rfkill_ignore[rf] = val
+          elif prop == 'name':
+            self.rfkill_usernames[rf] = val
           else:
             print "Unkown key in config file: " + line
 
@@ -158,17 +176,18 @@ class Rfkill:
   def click_menu(self, widget, event):
     if event.button == 1:
       popmenu = gtk.Menu()
-      self.get_rfkills()
-      self.get_rfstates()
-      self.set_main_icon()
-      self.update_tooltip()
+      self.update_all()
       if (self.hardswitchedoff):
         return
 
       for uri in self.rfkill_names.keys():
         name = self.rfkill_names[uri]
+        if (name in self.rfkill_usernames):
+          showname = self.rfkill_usernames[name]
+        else:
+          showname = name
         if (self.hardswitch != name):
-          menu_item = gtk.CheckMenuItem(label=name)
+          menu_item = gtk.CheckMenuItem(label=showname)
           if (self.hardswitchedoff):
             self.tooltips.set_tip(menu_item, "The hardware switch is activated, you cannot use software to turn this device on.")
           menu_item.set_active(self.rfkill_states[uri])

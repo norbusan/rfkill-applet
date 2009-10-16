@@ -1,4 +1,15 @@
 
+
+2009-06-20
+
+  * release 0.3
+  * check every 3 secs for updates
+    that could be done better maybe by changing the event loop using
+    dbus/glib and registering a callback with dbus when the rfkill 
+    hardware switch state has changed
+  * allow rfkill.name=foobar in config file, so to rename skitches
+    adjust config file to strip the sony- prefix from the names
+
 2009-06-20
 
   * release 0.2
