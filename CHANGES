@@ -1,0 +1,21 @@
+
+2009-06-20
+
+  * release 0.2
+
+2009-06-19
+
+  * change icon if hardware switch is off
+  * do not pop up the menu if the hard switch is activated
+  * add a config file, and reading from it, either from 
+    /etc/rfkill-applet.config or $HOME/.rfkill-applet.config
+
+2009-06-18
+
+   * pop up a message window telling that the prefs dialog is not implemented
+     fix location of pixmap in the panel itself, need full path
+
+2009-06-17
+
+   * release 0.1: first release
+

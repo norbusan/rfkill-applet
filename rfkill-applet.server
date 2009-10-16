@@ -21,7 +21,7 @@
         <oaf_attribute name="name" type="string" value="rfkill switch applet"/>
         <oaf_attribute name="description" type="string" value="Controlling hardware via rfkill switches"/>
         <oaf_attribute name="panel:category" type="string" value="Utility"/>
-	<oaf_attribute name="panel:icon" type="string" value="rfkill-applet.png"/>
+	<oaf_attribute name="panel:icon" type="string" value="rfkill-applet.svg"/>
 </oaf_server>
 </oaf_info>
 

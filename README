@@ -19,6 +19,10 @@ Installation:
 - put rfkill-applet.py into /usr/bin/rfkill-applet  (no .py extension!)
 - put rfkill-applet.server into /usr/lib/bonobo/server/
 - put rfkill-applet.png into /usr/share/pixmaps
+- put rfkill-applet-hardoff.png into /usr/share/pixmaps
+- put rfkill-applet.config into 
+     either /etc/rfkill-applet.config
+     or     $HOME/.rfkill-applet.config
 - restart gnome session
 - add the applet
 
