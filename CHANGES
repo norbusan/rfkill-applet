@@ -1,4 +1,11 @@
 
+2009-08-03
+
+  * release 0.5
+  * include support for using /dev/rfkill instead of HAL/DBUS if the
+    user has r/w permissions for it.
+  * fix icons for quit and about
+
 2009-06-23
 
   * release 0.4

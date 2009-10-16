@@ -1,6 +1,6 @@
 
 rfkill applet
-version 0.4
+version 0.5
 
 Access to the rfkill switches on the system
 
@@ -17,7 +17,10 @@ Code sources:
 
 Installation:
 - put rfkill-applet.py into /usr/bin/rfkill-applet  (no .py extension!)
-- put rfkill-applet.server into /usr/lib/bonobo/server/
+- put rfkillclient.py into /usr/lib/pythonNN/site-packages/
+  where pythonNN is your python version, or any path that is searched
+  by default by your python
+- put rfkill-applet.server into /usr/lib/bonobo/servers/
 - put rfkill-applet.png into /usr/share/pixmaps
 - put rfkill-applet-hardoff.png into /usr/share/pixmaps
 - put rfkill-applet.config into 
@@ -25,6 +28,26 @@ Installation:
      or     $HOME/.rfkill-applet.config
 - restart gnome session
 - add the applet
+
+
+By default rfkill-applet will first try to use /dev/rfkill if available
+and read/writeable. This access method is the preferred one as it is
+less resource intensive (no need to wake up every 3 secs). This interface
+to the rfkill subsystem was introduced in the kernel in 2.6.31-rc series.
+In case /dev/rfkill is not available or not useable rfkill-applet falls
+back to HAL/DBUS access.
+
+To configure /dev/rfkill access I recommend:
+- adding a group rfkill
+- adding the users that should be allowed to change rfkills to this group
+- adding a line to one of the config files for udev (or creating a new one),
+  eg /etc/udev/rules.d/99-local.rules with one line:
+  	KERNEL=="rfkill", NAME="rfkill", OWNER="root", GROUP="rfkill", MODE="0660"
+
+
+HAL/DBUS is normally already configured so that each user can access
+the rfkill stuff.
+
 
 Bugs: many, help needed, suggestions welcome!
 

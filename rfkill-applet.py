@@ -7,25 +7,19 @@
 
 import sys
 import os
-import dbus
 import pygtk
 pygtk.require('2.0')
-
+import threading
 import gtk
 import gnomeapplet
 
-import gobject
+import rfkillclient
 
-# from dbus.mainloop.glib import DBusGMainLoop
-# DBusGMainLoop(set_as_default=True)
-
-version = '0.4'
-
-bus = dbus.SystemBus()
-hal_obj = bus.get_object("org.freedesktop.Hal", "/org/freedesktop/Hal/Manager")
-hal = dbus.Interface(hal_obj, "org.freedesktop.Hal.Manager")
+version = '0.5'
 
 class Rfkill:
+
+  thread = None
 
   def __init__(self, applet, iid):
 
@@ -37,22 +31,14 @@ class Rfkill:
     self.icon_hardoff = gtk.Image()
     self.icon_hardoff.set_from_file(self.imagehardoff)
 
-    self.rfkill_devs = {}
-    self.rfkill_devobjs = {}
-    self.rfkill_usernames = {}
-    self.rfkill_names = {}
-    self.rfkill_states = {}
-    self.rfkill_ignore = {}
-    self.onvalue = {}
-    self.offvalue = {}
-    self.hardoffvalue = {}
-    self.default_onvalue = -1
-    self.default_offvalue = -1
-    self.default_hardoffvalue = -1
-    self.hardswitchedoff = False
+    self.config_names = {}
+    self.config_ignore = {}
 
-    # that are milliseconds!
-    self.timeout_interval = 3000
+    self.rfkills_hard = []
+    self.rfkills_soft = []
+    self.rfkills_name = []
+    self.rfkills_showname = []
+    self.hardswitchedoff = False
 
     self.panel_size = 24
 
@@ -64,39 +50,59 @@ class Rfkill:
     self.read_config(self.configfile)
 
     self.ebmain = gtk.EventBox()
-
     self.icon = gtk.Image()
-
-    self.update_all()
-    gobject.timeout_add(self.timeout_interval, self.update_all)
-
     self.ebmain.add(self.icon)
     self.applet.add(self.ebmain)
-
     self.ebmain.connect("button-press-event", self.click_menu)
-
     applet.connect("destroy", self.cleanup)
 
     self.menuxml="""
     <popup name="button3">
-    <menuitem name="Item 1" verb="About" label="_About" pixtype="stock" pixname="gnome-stock-about"/>
+    <menuitem name="Item 1" verb="About" label="_About" pixtype="stock" pixname="gtk-about"/>
     <menuitem name="Item 2" verb="Preferences" label="_Preferences" pixtype="stock" pixname="gtk-preferences"/>
+    <menuitem name="Item 3" verb="Quit" label="_Quit" pixtype="stock" pixname="gtk-quit"/>
     </popup>
     """
 
-    self.applet.setup_menu(self.menuxml, [ ("About",self.about_box), ("Preferences",self.prefs) ], None)
+    self.applet.setup_menu(self.menuxml, [ ("About",self.about_box), ("Preferences",self.prefs), ("Quit", self.cleanup) ], None)
+
+
+    # start the thread that reads/writes to /dev/rfkill
+    if self.thread != None:
+      self.thread.kill()
+      self.thread = None
+    self.thread = rfkillclient.RfkillClient(self, self.config_ignore)
+    self.thread.start()
+
+    # read all data from the rfkill thread and initialize the lists
+    self.update_all()
 
     applet.show_all()
+    gtk.gdk.threads_init()
     # self.load_prefs()
   
-
   def update_all(self):
-    self.get_rfkills()
-    self.get_rfstates()
+    self.rfkills_hard = []
+    self.rfkills_soft = []
+    self.rfkills_name = []
+    self.rfkills_idx = []
+    self.rfkills_showname = []
+    self.hardswitchedoff = False
+    if self.thread != None:
+      for idx, name in self.thread.get_rfkillall().iteritems():
+        hard, soft = self.thread.get_state(idx)
+        if hard:
+          self.hardswitchedoff = True
+        self.rfkills_hard.append(hard)
+        self.rfkills_soft.append(soft)
+        self.rfkills_name.append(name)
+        self.rfkills_idx.append(idx)
+        if (name in self.config_names):
+          self.rfkills_showname.append(self.config_names[name])
+        else:
+          self.rfkills_showname.append(name)
     self.set_main_icon()
     self.update_tooltip()
-    # return true, otherwise the gobject timer removes that callback
-    return True
     
   def update_tooltip(self):
     if (self.hardswitchedoff):
@@ -138,30 +144,18 @@ class Rfkill:
       if line.strip() == '':
         continue
       key, val = line.strip().split('=',1)
-      # first all the normal key=value pairs
-      if key == 'default_onvalue':
-        if val != '':
-          self.default_onvalue = int(val)
-      elif key == 'default_offvalue':
-        if val != '':
-          self.default_offvalue = int(val)
-      elif key == 'default_hardoffvalue':
-        if val != '':
-          self.default_hardoffvalue = int(val);
-      # now the specifications rfkill.property=val
-      else:
-        if val != '':
-          rf,prop = key.split('.',1)
-          if prop == 'onvalue':
-            self.onvalue[rf] = int(val)
-          elif prop == 'offvalue':
-            self.offvalue[rf] = int(val)
-          elif prop == 'ignore':
-            self.rfkill_ignore[rf] = val
-          elif prop == 'name':
-            self.rfkill_usernames[rf] = val
-          else:
-            print "Unkown key in config file: " + line
+      if val != '':
+        rf,prop = key.split('.',1)
+        if prop == 'onvalue':
+          self.onvalue[rf] = int(val)
+        elif prop == 'offvalue':
+          self.offvalue[rf] = int(val)
+        elif prop == 'ignore':
+          self.config_ignore[rf] = val
+        elif prop == 'name':
+          self.config_names[rf] = val
+        else:
+          print "Unkown key in config file: " + line
 
 
   def set_main_icon(self):
@@ -177,78 +171,26 @@ class Rfkill:
       self.update_all()
       if (self.hardswitchedoff):
         return
-
-      for uri in self.rfkill_names.keys():
-        name = self.rfkill_names[uri]
-        if (name in self.rfkill_usernames):
-          showname = self.rfkill_usernames[name]
-        else:
-          showname = name
+      for idx,showname in enumerate(self.rfkills_showname):
         menu_item = gtk.CheckMenuItem(label=showname)
-        if (self.hardswitchedoff):
-          self.tooltips.set_tip(menu_item, "The hardware switch is activated, you cannot use software to turn this device on.")
-        menu_item.set_active(self.rfkill_states[uri])
+        menu_item.set_active(not(self.rfkills_soft[idx]))
         menu_item.show()
-        menu_item.connect("toggled", self.toggle_rfkill, uri)
+        menu_item.connect("toggled", self.toggle_rfkill, idx)
         popmenu.append(menu_item)
       popmenu.show()
       popmenu.popup(None, None, None, event.button, event.time)
 
 
-  def toggle_rfkill (self, widget, uri):
-    #print "Toggling " + self.rfkill_names[uri]
-    dev = dbus.Interface(self.rfkill_devobjs[uri], 'org.freedesktop.Hal.Device.KillSwitch')
-    newval = not(self.rfkill_states[uri])
-    dev.SetPower(newval)
+  def set_hard_switch (self, newstate):
+    self.hardswitchedoff = newstate
+    self.set_main_icon()
+    self.update_tooltip()
+
+  def toggle_rfkill (self, widget, idx):
+    self.thread.toggle_softstate(self.rfkills_idx[idx])
   
-
-  def get_rfkills(self):
-    self.rfkill_devobjs = {}
-    self.rfkill_devs = {}
-    self.rfkill_names = {}
-    for udi in hal.FindDeviceByCapability ("killswitch"):
-      dev_obj = bus.get_object('org.freedesktop.Hal', udi)
-      dev = dbus.Interface(dev_obj, 'org.freedesktop.Hal.Device')
-      if (dev.GetProperty('killswitch.type') != "unknown"):
-        name = str(dev.GetProperty ('killswitch.name'))
-        if (not(name in self.rfkill_ignore)):
-          self.rfkill_devobjs[udi] = dev_obj
-          self.rfkill_devs[udi] = dev
-          self.rfkill_names[udi] = name
-
-  def get_rfstates(self):
-    for udi in self.rfkill_devs.keys():
-      name = self.rfkill_names[udi]
-      if (name in self.rfkill_ignore):
-        continue
-      val = int(self.rfkill_devs[udi].GetProperty('killswitch.state'))
-
-      offval = self.default_offvalue
-      if (name in self.offvalue):
-        offval = self.offvalue[name]
-
-      onval  = self.default_onvalue
-      if (name in self.offvalue):
-        onval = self.onvalue[name]
-
-      hardoffval = self.default_hardoffvalue
-      if (name in self.hardoffvalue):
-        hardoffval = self.hardoffvalue[name]
-
-      if (val == onval):
-        self.rfkill_states[udi] = True
-        self.hardswitchedoff = False
-      elif (val == offval):
-        self.rfkill_states[udi] = False
-        self.hardswitchedoff = False
-      elif (val == hardoffval):
-        self.rfkill_states[udi] = False
-        self.hardswitchedoff = True
-      else:
-        print "Unknown state: ", val
-
-
-  def cleanup(self, data):
+  def cleanup(self, a, b):
+    self.thread.kill()
     gtk.main_quit()
     sys.exit()
 
