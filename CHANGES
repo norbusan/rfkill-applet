@@ -2,6 +2,8 @@
 2009-11-06
 
   * fix udev rule to give correct permissions
+  * add rfkill-sys.py code from Andreas Boehler, it will later on 
+    integrated into the normal code
 
 2009-08-10
 
