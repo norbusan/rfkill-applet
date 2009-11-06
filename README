@@ -41,7 +41,7 @@ To configure /dev/rfkill access I recommend:
 - adding the users that should be allowed to change rfkills to this group
 - adding a line to one of the config files for udev (or creating a new one),
   eg /etc/udev/rules.d/99-local.rules with one line:
-  	KERNEL=="rfkill", NAME="rfkill", OWNER="root", GROUP="rfkill", MODE="0660"
+  	KERNEL=="rfkill", NAME="rfkill", OWNER="root", GROUP="rfkill", MODE="660"
 
 
 HAL/DBUS is normally already configured so that each user can access
