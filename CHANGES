@@ -1,4 +1,9 @@
 
+2009-11-10
+
+  * switch to sysapplet code, made some adaptions to run it in 
+    windowed mode, too
+
 2009-11-06
 
   * fix udev rule to give correct permissions
