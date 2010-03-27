@@ -19,6 +19,7 @@ Code sources and thanks:
 
 Installation:
 - put rfkill-applet.py into /usr/bin/rfkill-applet  (no .py extension!)
+- make /usr/bin/rfkkill-applet executable (chmod a+x /usr/bin/rfkill-applet)
 - put rfkill-applet.server into /usr/lib/bonobo/servers/
 - put rfkill-applet.png into /usr/share/pixmaps
 - put rfkill-applet-hardoff.png into /usr/share/pixmaps
