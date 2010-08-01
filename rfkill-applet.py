@@ -289,7 +289,7 @@ class Rfkill:
     about = gtk.AboutDialog()
     about.set_name("Rfkill Applet")
     about.set_version(version)
-    about.set_copyright("(C) 2009 Norbert Preining")
+    about.set_copyright("(C) 2009, 2010 Norbert Preining")
     about.set_authors(authors)
     #about.set_website("nothing here for now")
     #about.set_website_label("nothing here for now")
