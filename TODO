@@ -3,3 +3,5 @@
 
 sysapplet mode:
 - fix tooltips not working and breaking the applet in windowed mode
+- In /dev/rfkill-mode, the initial status is uknown!
+
