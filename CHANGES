@@ -1,8 +1,10 @@
 
-2009-11-10
+2010-08-01
 
-  * switch to sysapplet code, made some adaptions to run it in 
-    windowed mode, too
+  * release 0.7
+  * allow glob patterns in <NAME> in the <NAME>.ignore=1 config file.
+    this allows ignoring all phy at once:
+      phy*.ignore=1
 
 2009-11-06
 
