@@ -1,6 +1,12 @@
 
 2010-08-01
 
+  * create a branch in git for the sysapplet code
+  * switch to sysapplet code, made some adaptions to run it in 
+    windowed mode, too
+
+2010-08-01
+
   * release 0.7
   * allow glob patterns in <NAME> in the <NAME>.ignore=1 config file.
     this allows ignoring all phy at once:
