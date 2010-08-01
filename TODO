@@ -1,2 +1,5 @@
 - create decent icon
 - load icon in pixbuf and scale it to 20 or 22, or the size of the panel
+
+sysapplet mode:
+- fix tooltips not working and breaking the applet in windowed mode
