@@ -10,6 +10,7 @@ import os
 import pygtk
 pygtk.require('2.0')
 import gtk
+import gio
 import gnomeapplet
 import gobject
 import struct
@@ -31,7 +32,6 @@ def is_ignore_with_wildcards (what, ilist):
     if fnmatch.fnmatch(what, dname):
       return True
   return False
-
 
 class RfkillAccess():
   AccessO = None
@@ -133,7 +133,6 @@ class RfkillAccessDbus():
 
 
 
-
 class RfkillAccessDevRfkill():
   def __init__(self, applet, ignore):
     self.ignored = dict()
@@ -201,6 +200,38 @@ class RfkillAccessDevRfkill():
     os.close(writefd)
  
 
+class SysSwitch:
+  def __init__(self, applet, filename, type):
+    self.applet = applet
+    self.fn = filename
+    self.giof = gio.File(path=filename)
+    self.monitor = self.giof.monitor_file(gio.FILE_MONITOR_NONE, None)
+    self.monitor.connect("changed", self.callback_event)
+    self.state = None
+
+  def callback_event (self, monitor, file1, file2, evt_type):
+    print "sys file " + self.fn + " changed!"
+    self.state = self.get_state
+    return self.state
+
+  def get_state (self):
+    buf = os.read(self.fn, 1)
+    if (len(buf) != 1):
+      print "cannot rea from fd"
+    else:
+      return buf
+    return None
+
+  def toggle_softstate (self, idx):
+    if (self.state == 0):
+      self.state = 1
+    else:
+      self.state = 0
+    writefd = os.open(self.fn, os.O_RDWR)
+    if (os.write(writefd, self.state) < 1):
+      print "Cannot write to rfkill the full event type"
+    os.close(writefd)
+ 
 
 class Rfkill:
   def __init__(self, applet, iid):
@@ -215,6 +246,8 @@ class Rfkill:
 
     self.config_names = {}
     self.config_ignore = {}
+    self.config_files = {}
+    self.config_types = {}
 
     self.rfkills_hard = []
     self.rfkills_soft = []
@@ -262,6 +295,11 @@ class Rfkill:
     self.rfkills_idx = []
     self.rfkills_showname = []
     self.hardswitchedoff = False
+    self.sys_files = []
+    self.sys_names = []
+    self.sys_idx = []
+    self.sys_types = []
+    self.sys_showname = []
     for idx, name in self.AccessO.get_rfkillall().iteritems():
       hard, soft = self.AccessO.get_state(idx)
       if hard:
@@ -274,6 +312,12 @@ class Rfkill:
         self.rfkills_showname.append(self.config_names[name])
       else:
         self.rfkills_showname.append(name)
+    for rf,filename in self.config_files.iteritems():
+      print "rf=" + rf + " filename=" + filename
+      if (rf in self.config_types):
+        if (self.config_types[rf] == 'binary'):
+          self.sys_files.append(filename)
+          self.sys_types.append(self.config_types[rf])
     self.set_main_icon()
     self.update_tooltip()
     
@@ -327,6 +371,10 @@ class Rfkill:
           self.config_ignore[rf] = val
         elif prop == 'name':
           self.config_names[rf] = val
+        elif prop == 'file':
+          self.config_files[rf] = val
+        elif prop == 'type':
+          self.config_types[rf] = val
         else:
           print "Unknown key in config file: " + line
 
