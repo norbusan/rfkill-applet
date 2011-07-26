@@ -225,7 +225,6 @@ class Rfkill:
     self.panel_size = 24
 
     self.applet = applet
-    self.tooltips = gtk.Tooltips()
 
     # read first the global config file, then a local one
     self.read_config('/etc/rfkill-applet.config')
@@ -280,9 +279,9 @@ class Rfkill:
     
   def update_tooltip(self):
     if (self.hardswitchedoff):
-      self.tooltips.set_tip(self.ebmain, "The devices are switched off by hardware. You have to switch the hardware switch first on!")
+      self.ebmain.set_tooltip_text( "The devices are switched off by hardware. You have to switch the hardware switch first on!")
     else:
-      self.tooltips.set_tip(self.ebmain, "Click for configuration of active devices")
+      self.ebmain.set_tooltip_text("Click for configuration of active devices")
 
   def about_box(self, event, data=None):
     authors = ["Norbert Preining <preining at logic.at>"]
