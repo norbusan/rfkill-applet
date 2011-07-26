@@ -17,7 +17,7 @@ import struct
 import dbus
 import fnmatch
 
-version = '0.7'
+version = '0.8'
 
 
 event_format = "IBBBB"
@@ -201,37 +201,53 @@ class RfkillAccessDevRfkill():
  
 
 class SysSwitch:
-  def __init__(self, applet, filename, type):
+  def __init__(self, applet, name, filename, onval):
     self.applet = applet
     self.fn = filename
+    self.name = name
+    self.onvalue = onval
     self.giof = gio.File(path=filename)
     self.monitor = self.giof.monitor_file(gio.FILE_MONITOR_NONE, None)
     self.monitor.connect("changed", self.callback_event)
-    self.state = None
+    self.state = int(self.get_state())
+
+  def get_sysfs_value(self):
+    try:
+      file_descriptor = open(self.fn)
+    except:
+      return ""
+    value = file_descriptor.read()
+    file_descriptor.close()
+    return value
+
+  def set_sysfs_value(self, value):
+    try:
+      file_descriptor = open(self.fn, 'w')
+    except:
+      print "Cannot opfen " + self.fn + " for writing!"
+      return False
+    file_descriptor.write("%d" % int(value))
+    file_descriptor.close()
+    return True
 
   def callback_event (self, monitor, file1, file2, evt_type):
-    print "sys file " + self.fn + " changed!"
-    self.state = self.get_state
+    self.state = int(self.get_state())
     return self.state
 
   def get_state (self):
-    buf = os.read(self.fn, 1)
-    if (len(buf) != 1):
-      print "cannot rea from fd"
-    else:
-      return buf
-    return None
+    return self.get_sysfs_value()
 
   def toggle_softstate (self, idx):
     if (self.state == 0):
-      self.state = 1
+      newstate = self.onvalue
     else:
-      self.state = 0
-    writefd = os.open(self.fn, os.O_RDWR)
-    if (os.write(writefd, self.state) < 1):
-      print "Cannot write to rfkill the full event type"
-    os.close(writefd)
- 
+      newstate = 0
+    if (self.set_sysfs_value(newstate)):
+      self.state = newstate
+      return True
+    else:
+      print "Cannot write to " + self.fn
+      return False
 
 class Rfkill:
   def __init__(self, applet, iid):
@@ -245,15 +261,18 @@ class Rfkill:
     self.icon_hardoff.set_from_file(self.imagehardoff)
 
     self.config_names = {}
-    self.config_ignore = {}
     self.config_files = {}
     self.config_types = {}
+    self.config_ignore = {}
+    self.onvalue = {}
 
     self.rfkills_hard = []
     self.rfkills_soft = []
     self.rfkills_name = []
     self.rfkills_showname = []
     self.hardswitchedoff = False
+
+    self.sys_kills = []
 
     self.panel_size = 24
 
@@ -284,6 +303,15 @@ class Rfkill:
     self.AccessO = RfkillAccess(self, self.config_ignore)
 
     self.update_all()
+  
+    # support /sys files switches
+    for rf,filename in self.config_files.iteritems():
+      print "creating sys files object: " + filename
+      onval = 1
+      if (rf in self.onvalue):
+        onval = self.onvalue[rf]
+      tmp = SysSwitch(self, rf, filename, onval)
+      self.sys_kills.append(tmp)
 
     applet.show_all()
     # self.load_prefs()
@@ -295,11 +323,6 @@ class Rfkill:
     self.rfkills_idx = []
     self.rfkills_showname = []
     self.hardswitchedoff = False
-    self.sys_files = []
-    self.sys_names = []
-    self.sys_idx = []
-    self.sys_types = []
-    self.sys_showname = []
     for idx, name in self.AccessO.get_rfkillall().iteritems():
       hard, soft = self.AccessO.get_state(idx)
       if hard:
@@ -312,12 +335,6 @@ class Rfkill:
         self.rfkills_showname.append(self.config_names[name])
       else:
         self.rfkills_showname.append(name)
-    for rf,filename in self.config_files.iteritems():
-      print "rf=" + rf + " filename=" + filename
-      if (rf in self.config_types):
-        if (self.config_types[rf] == 'binary'):
-          self.sys_files.append(filename)
-          self.sys_types.append(self.config_types[rf])
     self.set_main_icon()
     self.update_tooltip()
     
@@ -332,7 +349,7 @@ class Rfkill:
     about = gtk.AboutDialog()
     about.set_name("Rfkill Applet")
     about.set_version(version)
-    about.set_copyright("(C) 2009, 2010 Norbert Preining")
+    about.set_copyright("(C) 2009, 2010, 2011 Norbert Preining")
     about.set_authors(authors)
     #about.set_website("nothing here for now")
     #about.set_website_label("nothing here for now")
@@ -390,14 +407,20 @@ class Rfkill:
     if event.button == 1:
       popmenu = gtk.Menu()
       self.update_all()
-      if (self.hardswitchedoff):
-        return
-      for idx,showname in enumerate(self.rfkills_showname):
-        menu_item = gtk.CheckMenuItem(label=showname)
-        menu_item.set_active(not(self.rfkills_soft[idx]))
+      if (not(self.hardswitchedoff)):
+        for idx,showname in enumerate(self.rfkills_showname):
+          menu_item = gtk.CheckMenuItem(label=showname)
+          menu_item.set_active(not(self.rfkills_soft[idx]))
+          menu_item.show()
+          menu_item.connect("toggled", self.toggle_rfkill, idx)
+          popmenu.append(menu_item)
+      for idx,syskill in enumerate(self.sys_kills):
+        menu_item = gtk.CheckMenuItem(label=syskill.name)
+        menu_item.set_active(int(syskill.state))
         menu_item.show()
-        menu_item.connect("toggled", self.toggle_rfkill, idx)
+        menu_item.connect("toggled", syskill.toggle_softstate)
         popmenu.append(menu_item)
+
       popmenu.show()
       popmenu.popup(None, None, None, event.button, event.time)
 
