@@ -1,4 +1,11 @@
 
+2011-07-26
+
+  * release 0.8
+  * allow to add switches linked to files on the filesystem, like
+    /sys/devices/platform/sony_laptop/.... See example config file
+    for how to use
+
 2010-08-01
 
   * release 0.7

@@ -1,6 +1,6 @@
 
 rfkill applet
-version 0.7
+version 0.8
 
 Access to the rfkill switches on the system
 
@@ -52,6 +52,6 @@ the rfkill stuff.
 
 Bugs: many, help needed, suggestions welcome!
 
-Copyright (C) 2009, 2010 Norbert Preining <preining@logic.at>
+Copyright (C) 2009, 2010, 2011 Norbert Preining <preining@logic.at>
 Licensed under GPLv3
 
