@@ -18,6 +18,8 @@ Code sources and thanks:
 
 
 Installation:
+- you have to install Python interface to GNOME Applet installed
+  On Debian/Ubuntu the package name is python-gnomeapplet
 - put rfkill-applet.py into /usr/bin/rfkill-applet  (no .py extension!)
   and make it executable (chmod a+x /usr/bin/rfkill-applet)
 - put rfkill-applet.server into /usr/lib/bonobo/servers/ and make it
@@ -30,6 +32,12 @@ Installation:
 - restart gnome session
 - add the applet
 
+Sys file access:
+Since version 0.8 rfkill-applet can be used to turn on/off "settings"
+in the /sys file hierarchy, of in fact, everywhere. See examples
+that make sense for the sony laptop in the example configuration file.
+If you need write access as user you have to specify some udev rules
+that allow write access to these files.
 
 By default rfkill-applet will first try to use /dev/rfkill if available
 and read/writeable. This access method is the preferred one as it is

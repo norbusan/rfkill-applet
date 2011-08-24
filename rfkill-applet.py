@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # rfkill-applet
-# (C) 2009, 2010 Norbert Preining
+# (C) 2009, 2010, 2011 Norbert Preining
 # Licensed under GPLv3 or any version higher
 #
 
@@ -17,7 +17,7 @@ import struct
 import dbus
 import fnmatch
 
-version = '0.8'
+version = '0.9pre'
 
 
 event_format = "IBBBB"
@@ -306,10 +306,18 @@ class Rfkill:
   
     # support /sys files switches
     for rf,filename in self.config_files.iteritems():
-      print "creating sys files object: " + filename
       onval = 1
       if (rf in self.onvalue):
         onval = self.onvalue[rf]
+      
+      try:
+        foo = open(filename)
+      except:
+        print "ignoring sys switch for " + filename
+        print "file does not exist!"
+        continue
+
+      foo.close
       tmp = SysSwitch(self, rf, filename, onval)
       self.sys_kills.append(tmp)
 

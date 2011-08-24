@@ -1,4 +1,10 @@
 
+2011-08 onward
+
+  * add a few remarks to the README file about sys files
+  * make sure that the applet does not crash on a not
+    existing sys file
+
 2011-07-26
 
   * release 0.8
