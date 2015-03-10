@@ -1,18 +1,21 @@
 #!/usr/bin/env python
 #
 # rfkill-applet
-# (C) 2009, 2010, 2011 Norbert Preining
+# (C) 2009, 2010, 2011, 2014 Norbert Preining
 # Licensed under GPLv3 or any version higher
 #
 
+import gi
+
+gi.require_version("Gtk", "2.0")
+
+from gi.repository import Gtk
+from gi.repository import MatePanelApplet
+
 import sys
 import os
-import pygtk
-pygtk.require('2.0')
-import gtk
-import gio
-import gnomeapplet
-import gobject
+from gi.repository import Gio
+from gi.repository import GObject
 import struct
 import dbus
 import fnmatch
@@ -75,7 +78,7 @@ class RfkillAccessDbus():
     self.rfkill_hardstate = dict()
     self.rfkill_softstate = dict()
     # set up timeout for restarting
-    gobject.timeout_add(3000, self.periodic_check)
+    GObject.timeout_add(3000, self.periodic_check)
 
   def periodic_check (self):
     self.parent_set_hard_switch()
@@ -141,7 +144,7 @@ class RfkillAccessDevRfkill():
       if v:
         self.ignored[k] = 1
     self.rfkillfd = os.open("/dev/rfkill", os.O_RDONLY)
-    gobject.io_add_watch(self.rfkillfd, gobject.IO_IN, self.callback_event)
+    GObject.io_add_watch(self.rfkillfd, GObject.IO_IN, self.callback_event)
     self.rfkill_names = dict()
     self.rfkill_hardstate = dict()
     self.rfkill_softstate = dict()
@@ -206,8 +209,8 @@ class SysSwitch:
     self.fn = filename
     self.name = name
     self.onvalue = onval
-    self.giof = gio.File(path=filename)
-    self.monitor = self.giof.monitor_file(gio.FILE_MONITOR_NONE, None)
+    self.giof = Gio.File(path=filename)
+    self.monitor = self.giof.monitor_file(Gio.FileMonitorFlags.NONE, None)
     self.monitor.connect("changed", self.callback_event)
     self.state = int(self.get_state())
 
@@ -255,9 +258,9 @@ class Rfkill:
     self.configfile = os.environ.get('HOME') + '/.rfkill-applet.config'
     self.image = '/usr/share/pixmaps/rfkill-applet.png'
     self.imagehardoff = '/usr/share/pixmaps/rfkill-applet-hardoff.png'
-    self.icon_hardon = gtk.Image()
+    self.icon_hardon = Gtk.Image()
     self.icon_hardon.set_from_file(self.image)
-    self.icon_hardoff = gtk.Image()
+    self.icon_hardoff = Gtk.Image()
     self.icon_hardoff.set_from_file(self.imagehardoff)
 
     self.config_names = {}
@@ -282,8 +285,8 @@ class Rfkill:
     self.read_config('/etc/rfkill-applet.config')
     self.read_config(self.configfile)
 
-    self.ebmain = gtk.EventBox()
-    self.icon = gtk.Image()
+    self.ebmain = Gtk.EventBox()
+    self.icon = Gtk.Image()
     self.ebmain.add(self.icon)
     self.applet.add(self.ebmain)
     self.ebmain.connect("button-press-event", self.click_menu)
@@ -354,7 +357,7 @@ class Rfkill:
 
   def about_box(self, event, data=None):
     authors = ["Norbert Preining <preining at logic.at>"]
-    about = gtk.AboutDialog()
+    about = Gtk.AboutDialog()
     about.set_name("Rfkill Applet")
     about.set_version(version)
     about.set_copyright("(C) 2009, 2010, 2011 Norbert Preining")
@@ -366,7 +369,7 @@ class Rfkill:
 
 
   def prefs(self, event, data=None):
-    prefdiag = gtk.MessageDialog(buttons=gtk.BUTTONS_OK)
+    prefdiag = Gtk.MessageDialog(buttons=Gtk.ButtonsType.OK)
     prefdiag.set_property('text', "Not implemented yet!")
     prefdiag.run()
     prefdiag.destroy()
@@ -413,17 +416,17 @@ class Rfkill:
 
   def click_menu(self, widget, event):
     if event.button == 1:
-      popmenu = gtk.Menu()
+      popmenu = Gtk.Menu()
       self.update_all()
       if (not(self.hardswitchedoff)):
         for idx,showname in enumerate(self.rfkills_showname):
-          menu_item = gtk.CheckMenuItem(label=showname)
+          menu_item = Gtk.CheckMenuItem(label=showname)
           menu_item.set_active(not(self.rfkills_soft[idx]))
           menu_item.show()
           menu_item.connect("toggled", self.toggle_rfkill, idx)
           popmenu.append(menu_item)
       for idx,syskill in enumerate(self.sys_kills):
-        menu_item = gtk.CheckMenuItem(label=syskill.name)
+        menu_item = Gtk.CheckMenuItem(label=syskill.name)
         menu_item.set_active(int(syskill.state))
         menu_item.show()
         menu_item.connect("toggled", syskill.toggle_softstate)
@@ -442,7 +445,7 @@ class Rfkill:
     self.AccessO.toggle_softstate(self.rfkills_idx[idx])
   
   def cleanup(self, a, b):
-    gtk.main_quit()
+    Gtk.main_quit()
     sys.exit()
 
 
@@ -451,22 +454,21 @@ def rfkill_factory(applet, iid):
   return True
 
 if len(sys.argv) == 2 and sys.argv[1] == '-d':   
-  main_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+  main_window = Gtk.Window(Gtk.WindowType.TOPLEVEL)
   main_window.set_title("Rfkill Applet")
-  main_window.connect("destroy", gtk.main_quit) 
+  main_window.connect("destroy", Gtk.main_quit) 
   app = gnomeapplet.Applet()
   rfkill_factory(app, None)
   app.reparent(main_window)
   main_window.show_all()
-  gtk.main()
+  Gtk.main()
   sys.exit()
 
 if __name__ == '__main__':
   print('Starting factory')
-  gnomeapplet.bonobo_factory("OAFIID:RfkillApplet_Factory", 
-                             gnomeapplet.Applet.__gtype__, 
-                             "RFKill Switch Applet", "0.1", 
-                             rfkill_factory)
+  MatePanelApplet.Applet.factory_main("OAFIID:RfkillApplet_Factory", True,
+                             MatePanelApplet.Applet.__gtype__, 
+                             rfkill_factory, None)
 
 
 # vim:set tabstop=2 expandtab: #

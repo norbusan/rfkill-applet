@@ -14,9 +14,9 @@
 # Bugs/Todo:
 # In /dev/rfkill-mode, the initial status is uknown!
 
-import pygtk
-import gtk
-import gobject
+import gi
+from gi.repository import Gtk
+from gi.repository import GObject
 import os
 import struct
 import dbus
@@ -73,7 +73,7 @@ class RfkillAccessDbus():
         self.rfkill_hardstate = dict()
         self.rfkill_softstate = dict()
         # set up timeout for restarting
-        gobject.timeout_add(3000, self.periodic_check)
+        GObject.timeout_add(3000, self.periodic_check)
         
     def periodic_check (self):
         self.parent_set_hard_switch()
@@ -137,7 +137,7 @@ class RfkillAccessDevRfkill():
             if v:
                 self.ignored[k] = 1
         self.rfkillfd = os.open("/dev/rfkill", os.O_RDONLY)
-        gobject.io_add_watch(self.rfkillfd, gobject.IO_IN, self.callback_event)
+        GObject.io_add_watch(self.rfkillfd, GObject.IO_IN, self.callback_event)
         self.rfkill_names = dict()
         self.rfkill_hardstate = dict()
         self.rfkill_softstate = dict()
@@ -257,7 +257,7 @@ class TrayMenu(object):
                 self.rfkills_showname.append(name)        
         
     def quit_activate(self, widget):
-        gtk.main_quit()
+        Gtk.main_quit()
         
     def set_hard_switch (self, newstate):
         self.hardswitchedoff = newstate
@@ -269,28 +269,28 @@ class TrayMenu(object):
             icon.set_tooltip('Hardware RfKill Switch is active!')
         
     def show_menu(self, widget, button, time):
-        menu = gtk.Menu()
+        menu = Gtk.Menu()
         self.update_all()
         if not self.hardswitchedoff:
             for idx,showname in enumerate(self.rfkills_showname):
-                item = gtk.CheckMenuItem(label=showname)
+                item = Gtk.CheckMenuItem(label=showname)
                 item.set_active(not(self.rfkills_soft[idx]))
                 item.connect('activate', self.toggle_rfkill, idx)
                 menu.append(item)
-        item = gtk.ImageMenuItem(stock_id=gtk.STOCK_QUIT)
+        item = Gtk.ImageMenuItem(stock_id=Gtk.STOCK_QUIT)
         item.connect('activate', self.quit_activate)
         menu.append(item)                
         menu.show_all()
-        menu.popup(None, None, gtk.status_icon_position_menu, button, time, icon)
+        menu.popup(None, None, Gtk.status_icon_position_menu, button, time, icon)
             
     def toggle_rfkill(self, widget, idx):
         self.Access0.toggle_softstate(self.rfkills_idx[idx])
 
 
-icon = gtk.status_icon_new_from_icon_name('rfkill-applet')
+icon = Gtk.status_icon_new_from_icon_name('rfkill-applet')
 icon.set_tooltip('RfKill')
 menu = TrayMenu()
 icon.connect('popup-menu', menu.show_menu)
 #icon.connect('activate', menu.show_menu) # Does not work, because not enough arguments are emitted
 
-gtk.main()
+Gtk.main()
